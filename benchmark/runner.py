@@ -132,6 +132,22 @@ class BenchmarkRunner:
             X_train = pca.fit_transform(X_train)
             X_test = pca.transform(X_test)
 
+        # Clamp n_qubits if dataset has fewer features than requested
+        actual_features = X_train.shape[1]
+        effective_n_qubits = self.n_qubits
+        if actual_features < self.n_qubits:
+            effective_n_qubits = actual_features
+            tqdm.write(
+                f"  ⚠  {kernel_name}/{dataset_name}: dataset has only {actual_features} feature(s) "
+                f"but n_qubits={self.n_qubits} was requested. "
+                f"Using n_qubits={actual_features} for this run."
+            )
+            # Update kernel and feature map n_qubits in-place
+            kernel.n_qubits = actual_features
+            kernel.stats.n_qubits = actual_features
+            if hasattr(kernel, "feature_map"):
+                kernel.feature_map.n_qubits = actual_features
+
         # Final MinMax Scaling to [0, pi] for quantum feature maps
         from sklearn.preprocessing import MinMaxScaler
         scaler_pi = MinMaxScaler(feature_range=(0, np.pi))

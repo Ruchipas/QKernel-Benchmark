@@ -49,15 +49,31 @@ if __name__ == "__main__":
     from datasets.loader import load_dataset
     from kernels.fidelity_kernel import FidelityKernel
 
+    N_QUBITS = 2
+
     X_train, X_test, y_train, y_test = load_dataset(
         name="breast_cancer",
-        n_samples=40,
-        n_features=2,
+        n_samples=100,
+        n_features=N_QUBITS,
         test_size=0.25,
         random_state=42,
     )
 
-    kernel = FidelityKernel(n_qubits=2, shots=1024, seed=42)
+    # PCA to reduce to n_qubits if needed (same as runner)
+    from sklearn.decomposition import PCA
+    from sklearn.preprocessing import StandardScaler, MinMaxScaler
+    if X_train.shape[1] > N_QUBITS:
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test  = scaler.transform(X_test)
+        pca = PCA(n_components=N_QUBITS, random_state=42)
+        X_train = pca.fit_transform(X_train)
+        X_test  = pca.transform(X_test)
+    scaler_pi = MinMaxScaler(feature_range=(0, np.pi))
+    X_train = scaler_pi.fit_transform(X_train)
+    X_test  = scaler_pi.transform(X_test)
+
+    kernel = FidelityKernel(n_qubits=N_QUBITS, shots=1024, seed=42)
 
     K_train = kernel.build_kernel_matrix(X_train)
     K_test = kernel.build_kernel_matrix(X_test, X_train)
